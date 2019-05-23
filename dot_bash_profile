@@ -1,0 +1,267 @@
+#
+# ~/.bashrc
+#
+
+# ------------------------------------------------------------------------------
+# 1. GENERAL STUFF
+# ------------------------------------------------------------------------------
+
+# If not running interactively, don't do anything
+[[ $- != *i* ]] && return
+
+# set PATH
+# ------------------------------------------------------------------------------
+export PATH="${PATH}:${HOME}/bin"
+export PATH="${PATH}:/usr/local/sbin"
+export PATH="${PATH}:/usr/local/bin"
+export PATH="/usr/local/opt/grep/libexec/gnubin:${PATH}"
+export PATH="${PATH}:$(go env GOPATH)/bin"
+export PATH="${PATH}:~/Library/Python/3.6/bin"
+export PATH="${PATH}:~/bin/waitrose"
+export PATH="${PATH}:/opt/istio-1.0.2/bin"
+# Ruby binary from homebrew first in path than mac os
+#export PATH="/usr/local/opt/ruby/bin:$PATH"
+
+# Define some env variables
+# ------------------------------------------------------------------------------
+export JAVA_HOME=$(/usr/libexec/java_home)
+export EDITOR='vim'
+export GOPATH=$(go env GOPATH)
+
+# Customize prompt "user@host:~/Desktop/something (master)(minikube) $ "
+# ------------------------------------------------------------------------------
+function __prompt_command() {
+    PS1=""
+
+	local prompt_user="\[\033[36m\]\u\[\033[0m\]"
+	local prompt_host="\[\033[33m\]\h\[\033[0m\]"
+	local prompt_cwd="\[\033[34m\]\w\[\033[0m\]"
+    # basic information (user@host:path)
+    PS1+="$prompt_user@$prompt_host:$prompt_cwd"
+    #PS1+="$prompt_user@$prompt_host"
+
+	# git context 
+	local prompt_git="\[\033[32m\]\$(git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/ (\1)/')\[\033[0m\]"
+	PS1+="$prompt_git"
+
+	# kubectl context
+	local prompt_kubectl=""
+	if [ -n "$PROMPT_KUBECTL_ENABLED" ]; then
+		local prompt_kubectl_context
+		local prompt_kubectl_color
+		prompt_kubectl_context="$(kubectl config current-context)"
+		if [ -n "$(echo $prompt_kubectl_context | grep staging)" ]; then
+			prompt_kubectl_color="33m"
+		elif [ -n "$(echo $prompt_kubectl_context | grep production)" ]; then
+			prompt_kubectl_color="31m"
+		else
+			prompt_kubectl_color="36m"
+		fi
+		prompt_kubectl="\[\033[$prompt_kubectl_color\]($prompt_kubectl_context)\[\033[0m\]"
+	fi
+
+	PS1+="$prompt_kubectl"
+
+    # aws context
+    local prompt_aws=""
+    if [ -n "$PROMPT_AWS_ENABLED" ]; then
+        local prompt_aws_context
+        local prompt_aws_color
+        prompt_aws_context="$(cat ~/.aws/context.config)"
+        case "$prompt_aws_context" in
+            nonprod)
+                prompt_aws_color="33m"
+                ;;
+            performance-tests)
+                prompt_aws_color="33m"
+                ;;
+            sandbox)
+                prompt_aws_color="36m"
+                ;;
+            platform)
+                prompt_aws_color="36m"
+                ;;
+            *)
+                prompt_aws_color="36m"
+                ;;
+        esac
+        prompt_aws="\[\033[$prompt_aws_color\]($prompt_aws_context)\[\033[0m\]"
+    fi
+
+    PS1+="$prompt_aws"
+
+	# prompt $ or # for root
+	local prompt_bang="\[\033[0m\] \\\$ \[\033[0m\]"
+	PS1+="$prompt_bang"
+}
+PROMPT_COMMAND=__prompt_command
+
+# ------------------------------------------------------------------------------
+# 2. Improve Terminal
+# ------------------------------------------------------------------------------
+
+export CLICOLOR=1
+# default colors for ls
+#export LSCOLORS=ExFxBxDxCxegedabagacad
+# solarized colors for ls
+export LSCOLORS=gxBxhxDxfxhxhxhxhxcxcx
+
+# vim as default editor
+export GREP_OPTIONS='--color=auto'
+
+# Aliases
+# ------------------------------------------------------------------------------
+
+case "$(uname -s)" in 
+    Darwin)
+        alias ls='ls -G'
+        ;;
+    Linux)
+        alias ls='ls --color=auto'
+        ;;
+esac
+
+# aliases of new commands
+alias toggle='if [ -z "$PROMPT_ALL_ENABLED" ]; then PROMPT_ALL_ENABLED="TRUE"; PROMPT_KUBECTL_ENABLED="TRUE"; PROMPT_AWS_ENABLED="TRUE"; else unset PROMPT_ALL_ENABLED; unset PROMPT_KUBECTL_ENABLED; unset PROMPT_AWS_ENABLED; fi'
+alias toggle_kubectl_prompt='if [ -z "$PROMPT_KUBECTL_ENABLED" ]; then PROMPT_KUBECTL_ENABLED="TRUE"; else unset PROMPT_KUBECTL_ENABLED; fi'
+alias toggle_aws_prompt='if [ -z "$PROMPT_AWS_ENABLED" ]; then PROMPT_AWS_ENABLED="TRUE"; else unset PROMPT_AWS_ENABLED; fi'
+alias markdown='function _display_markdown() { cat $1 | pandoc -f markdown_github | browser; }; _display_markdown'
+alias grep='grep --color=auto'
+alias grepIp='grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b"'
+alias transfer=transfer
+alias python='python3'
+alias publicip='curl ipinfo.io/ip'
+alias ping='prettyping --nolegend'
+alias mindera-aws='aws-vault exec mindera-aws -- '
+
+export X_COUNTER=0
+function unique_counter() {
+    echo $X_COUNTER
+    X_COUNTER=$((X_COUNTER + 1))
+}
+
+transfer() {
+    # write to output to tmpfile because of progress bar
+    tmpfile=$( mktemp -t transferXXX )
+    curl --progress-bar --upload-file $1 https://transfer.sh/$(basename $1) >> $tmpfile;
+    cat $tmpfile;
+    rm -f $tmpfile;
+}
+
+# ITERM 2 
+# ------------------------------------------------------------------------------
+test -e "${HOME}/.iterm2_shell_integration.bash" && source "${HOME}/.iterm2_shell_integration.bash"
+
+# ------------------------------------------------------------------------------
+# 3. History Customization
+# ------------------------------------------------------------------------------
+
+# avoid duplicates
+export HISTCONTROL=ignoredups
+# export HISTCONTROL=ignoredups:erasedups
+
+# history size and file location
+export HISTSIZE=1000000000
+export HISTFILESIZE=1000000000
+export HISTFILE=$HOME/.bash_history
+
+# When the shell exits, append to the history file instead of overwriting it
+shopt -s histappend
+
+# After each command, append to the history file and reread it
+export PROMPT_COMMAND="history -a; history -c; history -r; $PROMPT_COMMAND"
+#export PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND$'; '}history -a; history -c; history -r"
+
+#######################
+# GCLOUD Installation #
+#######################
+
+# The next line updates PATH for the Google Cloud SDK.
+if [ -f '/Users/vasco/bin/google-cloud-sdk/path.bash.inc' ]; then
+    source '/Users/vasco/bin/google-cloud-sdk/path.bash.inc'
+else
+    echo 'WARNING: Could not update path for the Google Cloud SDK!'
+fi
+
+# The next line enables shell command completion for gcloud.
+if [ -f '/Users/vasco/bin/google-cloud-sdk/completion.bash.inc' ]; then
+    source '/Users/vasco/bin/google-cloud-sdk/completion.bash.inc'
+else
+    echo 'WARNING: Could not enable shell command completion for gcloud!'
+fi
+
+# The next line enables bash completion for the go tool.
+if [ -f '/Users/vasco/bin/bash_completion/go-pkg-complete.bash.inc' ]; then
+    source '/Users/vasco/bin/bash_completion/go-pkg-complete.bash.inc'
+else
+    echo 'WARNING: Could not enable bash completion for the go tool!'
+fi
+
+####################
+# BASH COMPLETIONS #
+####################
+
+# brew bash completions
+if [ -f $(brew --prefix)/etc/bash_completion ]; then
+    . $(brew --prefix)/etc/bash_completion
+fi
+
+# Kubectl bash completion
+if [ -f '/Users/vasco/bin/bash_completion/kubectl.bash_completion' ]; then
+    source /Users/vasco/bin/bash_completion/kubectl.bash_completion
+else
+    echo 'WARNING: Could not enable shell command completion for kubectl!'
+fi
+
+# minikube bash completion
+if [ -f '/Users/vasco/bin/bash_completion/minikube.bash_completion' ]; then
+    source /Users/vasco/bin/bash_completion/minikube.bash_completion
+else
+    echo 'WARNING: Could not enable shell command completion for minikube!'
+fi
+
+# terraform bash completion
+if [ -f '/Users/vasco/bin/bash_completion/terraform.bash_completion' ]; then
+    source /Users/vasco/bin/bash_completion/terraform.bash_completion
+else
+    echo 'WARNING: Could not enable shell command completion for terraform!'
+fi
+
+# aws cli bash completion
+#complete -C `which aws_completer` aws
+
+# bash completion for Concourse CLI
+_fly-cli() {
+    # All arguments except the first one
+    args=("${COMP_WORDS[@]:1:$COMP_CWORD}")
+    # Only split on newlines
+    local IFS=$'\n'
+    # Call completion (note that the first element of COMP_WORDS is
+    # the executable itself)
+    COMPREPLY=($(GO_FLAGS_COMPLETION=1 ${COMP_WORDS[0]} "${args[@]}"))
+    return 0
+}
+complete -F _fly-cli fly
+
+########################
+# RANDOM USELESS STUFF #
+########################
+## Personal and useless stuff
+# check if it's monday and give motivation
+case "$(date +%u)" in
+    1) echo 'Hang on, be brave, get a coffee and start coding!'
+        ;;
+esac
+
+# Setting PATH for Python 3.6
+# The original version is saved in .bash_profile.pysave
+PATH="/Library/Frameworks/Python.framework/Versions/3.6/bin:${PATH}"
+
+unset GREP_OPTIONS
+
+# Currencyfair crap
+export CF_SOURCES=~/Projects/currencyfair
+
+#THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
+export SDKMAN_DIR="/Users/vasco/.sdkman"
+[[ -s "/Users/vasco/.sdkman/bin/sdkman-init.sh" ]] && source "/Users/vasco/.sdkman/bin/sdkman-init.sh"

@@ -1,0 +1,6 @@
+let g:netrw_dirhistmax  =10
+let g:netrw_dirhist_cnt =4
+let g:netrw_dirhist_1='/Users/vasco/.oh-my-zsh'
+let g:netrw_dirhist_2='/Users/vasco/.antigen'
+let g:netrw_dirhist_3='/Users/vasco/Projects/jvosantos/sandbox/a-auto-configuration/a-spring-boot-starter'
+let g:netrw_dirhist_4='/Users/vasco/Projects/betfair-us/amtote-proxy/templates'
