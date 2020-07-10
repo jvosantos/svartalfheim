@@ -12,6 +12,7 @@ ln -s $(pwd)/dot_gitignore ~/.gitignore
 ln -s $(pwd)/dot_gitconfig ~/.gitconfig
 ln -s $(pwd)/dot_vim ~/.vim
 ln -s $(pwd)/dot_vimrc ~/.vimrc
+ln -s $(pwd)/dot_vim_runtime ~/.vim_runtime
 
 # Install xcode
 if ! [ $(xcode-select -p) ]; then
