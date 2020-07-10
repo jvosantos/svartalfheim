@@ -43,7 +43,7 @@ if not functions -q fisher
 end
 
 # Bootstrap Brew
-if brew bundle check --global
+if not brew bundle check --global > /dev/null
     brew bundle install --global
 end
 
